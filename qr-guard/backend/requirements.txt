@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+sqlalchemy>=2,<3
+pydantic>=2,<3
+pydantic-settings>=2,<3
+PyJWT[crypto]
+pwdlib[argon2]
