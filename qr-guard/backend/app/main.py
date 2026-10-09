@@ -1,8 +1,19 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.routes import api_router
+from app.settings import get_settings
+from app.utils.errors import register_exception_handlers
+
+settings = get_settings()
 
 app = FastAPI(title="QR Guard API", version="0.1.0")
-
-
-@app.get("/health")
-def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+register_exception_handlers(app)
+app.include_router(api_router)

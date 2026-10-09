@@ -31,10 +31,12 @@ python -m pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-The API health check is available at `http://127.0.0.1:8000/health`; interactive API docs are at `http://127.0.0.1:8000/docs`.
+The API health check is available at `http://127.0.0.1:8000/api/health`; interactive API docs are at `http://127.0.0.1:8000/docs`.
+
+To configure the backend, copy `.env.example` to `.env` in the project root. The API loads `DATABASE_URL` and `CORS_ORIGINS` from that file or the process environment. SQLite is the default database; the SQLAlchemy engine and session dependency are ready for future routes.
 
 ## Configuration and security
 
-Copy `.env.example` values into the appropriate local environment files when configuration is added. Never commit real secrets. `JWT_SECRET_KEY` is a placeholder, not a usable key. The backend currently exposes only a health check and does not load these settings yet.
+Never commit real secrets. `JWT_SECRET_KEY` is a placeholder, not a usable key. Authentication and QR analysis are not implemented.
 
-JWT, password-hashing, SQLAlchemy, and Pydantic packages are listed for the upcoming stages; no authentication or database behavior is implemented in this scaffold.
+To run backend tests, install `backend/requirements-dev.txt` and run `pytest` from the `backend` directory.

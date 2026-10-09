@@ -1,0 +1,1 @@
+"""QR Guard API application package."""
