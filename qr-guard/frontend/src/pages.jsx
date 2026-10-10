@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Activity, ArrowDownLeft, ArrowRight, ArrowUpRight, BadgeCheck, Check, CheckCircle2,
   CircleAlert, Clock3, FileImage, Fingerprint, Globe2, KeyRound, LockKeyhole, Mail,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Brand, MetricCard, PageIntro, PublicNavigation, ScanTable, StatusBadge } from './components.jsx'
+import { useAuth } from './context/AuthContext.jsx'
 import { dashboardTotals, featuredScan, sampleScans } from './mockData.js'
 
 function PublicFooter() {
@@ -26,11 +27,155 @@ export function LandingPage() {
 
 function AuthPage({ register = false }) {
   const navigate = useNavigate()
+  const { login, register: registerUser, token } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
-  function submit(event) { event.preventDefault(); navigate('/dashboard') }
-  return <div className="auth-page cyber-grid"><header className="auth-header page-width"><Brand /><Link to="/" className="nav-public-link"><ArrowDownLeft size={15} />Back to home</Link></header><main className="auth-layout page-width"><section className="auth-panel animate-rise"><div className="auth-heading"><p className="eyebrow">{register ? 'START YOUR WORKSPACE' : 'YOUR QR GUARD WORKSPACE'}</p><h1>{register ? 'Create your workspace' : 'Welcome back'}</h1><p>{register ? 'A clearer view of every QR destination starts here.' : 'Sign in to review your scans and security signals.'}</p></div><form onSubmit={submit} className="auth-form">{register && <label className="field-label">Full name<span className="field-wrap"><UserRound size={16} /><input autoComplete="name" name="name" placeholder="Jordan Davis" required /></span></label>}<label className="field-label">Email address<span className="field-wrap"><Mail size={16} /><input autoComplete="email" name="email" placeholder="you@example.com" type="email" required /></span></label><label className="field-label">Password<span className="field-wrap"><KeyRound size={16} /><input autoComplete={register ? 'new-password' : 'current-password'} name="password" placeholder={register ? 'At least 8 characters' : 'Enter your password'} type={showPassword ? 'text' : 'password'} minLength={8} required /><button className="field-action" type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <X size={16} /> : <Sparkles size={16} />}</button></span></label>{register && <label className="field-label">Confirm password<span className="field-wrap"><KeyRound size={16} /><input autoComplete="new-password" name="confirm-password" placeholder="Repeat your password" type="password" minLength={8} required /></span></label>}{!register && <div className="auth-form-extra"><label className="check-label"><input type="checkbox" />Keep me signed in</label><button type="button" className="subtle-button">Forgot password?</button></div>}<button className="button button-primary auth-submit" type="submit">{register ? 'Create demo account' : 'Sign in to demo'} <ArrowRight size={16} /></button></form><p className="auth-switch">{register ? 'Already have an account?' : 'New to QR Guard?'} <Link to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Create an account'}</Link></p><div className="demo-notice"><LockKeyhole size={15} /><span><strong>Frontend demo only</strong><small>This form does not send or store credentials. Submitting opens the sample dashboard.</small></span></div></section><aside className="auth-aside"><span className="auth-aside-mark"><ShieldCheck size={30} /></span><p className="eyebrow">SCAN SMART. STAY SAFE.</p><h2>Pause before<br />you tap.</h2><p>Make the hidden destination visible. Review the signals. Choose what to do next.</p><div className="auth-aside-bottom"><span>01 / 03</span><div><i className="active" /><i /><i /></div><span>DESTINATION FIRST</span></div></aside></main><p className="auth-footnote">QR GUARD <i>·</i> DESTINATION INTELLIGENCE</p></div>
-}
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  })
 
+  useEffect(() => {
+    if (token) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [token, navigate])
+
+  function handleChange(event) {
+    const { name, value } = event.target
+    setForm((current) => ({ ...current, [name]: value }))
+  }
+
+  async function submit(event) {
+    event.preventDefault()
+    setError('')
+
+    if (register) {
+      if (!form.username.trim()) {
+        setError('Username is required.')
+        return
+      }
+
+      if (form.password.length < 12) {
+        setError('Password must be at least 12 characters long.')
+        return
+      }
+
+      if (form.password !== form.confirmPassword) {
+        setError('Passwords do not match.')
+        return
+      }
+    }
+
+    setBusy(true)
+
+    try {
+      if (register) {
+        await registerUser({
+          username: form.username.trim(),
+          email: form.email.trim(),
+          password: form.password,
+        })
+      } else {
+        await login({
+          email: form.email.trim(),
+          password: form.password,
+        })
+      }
+
+      navigate('/dashboard', { replace: true })
+    } catch (requestError) {
+      const detail = requestError.response?.data?.detail
+      const message = detail || 'Unable to complete authentication. Please try again.'
+      setError(message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="auth-page cyber-grid">
+      <header className="auth-header page-width">
+        <Brand />
+        <Link to="/" className="nav-public-link"><ArrowDownLeft size={15} />Back to home</Link>
+      </header>
+      <main className="auth-layout page-width">
+        <section className="auth-panel animate-rise">
+          <div className="auth-heading">
+            <p className="eyebrow">{register ? 'START YOUR WORKSPACE' : 'YOUR QR GUARD WORKSPACE'}</p>
+            <h1>{register ? 'Create your workspace' : 'Welcome back'}</h1>
+            <p>{register ? 'A clearer view of every QR destination starts here.' : 'Sign in to review your scans and security signals.'}</p>
+          </div>
+          <form onSubmit={submit} className="auth-form">
+            {register && (
+              <label className="field-label">
+                Username
+                <span className="field-wrap">
+                  <UserRound size={16} />
+                  <input autoComplete="username" name="username" placeholder="jordan_works" value={form.username} onChange={handleChange} required />
+                </span>
+              </label>
+            )}
+            <label className="field-label">
+              Email address
+              <span className="field-wrap">
+                <Mail size={16} />
+                <input autoComplete="email" name="email" placeholder="you@example.com" type="email" value={form.email} onChange={handleChange} required />
+              </span>
+            </label>
+            <label className="field-label">
+              Password
+              <span className="field-wrap">
+                <KeyRound size={16} />
+                <input
+                  autoComplete={register ? 'new-password' : 'current-password'}
+                  name="password"
+                  placeholder={register ? 'At least 12 characters' : 'Enter your password'}
+                  type={showPassword ? 'text' : 'password'}
+                  minLength={12}
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button className="field-action" type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                  {showPassword ? <X size={16} /> : <Sparkles size={16} />}
+                </button>
+              </span>
+            </label>
+            {register && (
+              <label className="field-label">
+                Confirm password
+                <span className="field-wrap">
+                  <KeyRound size={16} />
+                  <input autoComplete="new-password" name="confirmPassword" placeholder="Repeat your password" type="password" minLength={12} value={form.confirmPassword} onChange={handleChange} required />
+                </span>
+              </label>
+            )}
+            {!register && (
+              <div className="auth-form-extra">
+                <label className="check-label"><input type="checkbox" />Keep me signed in</label>
+                <button type="button" className="text-button">Forgot password?</button>
+              </div>
+            )}
+            {error && <p className="form-error" role="alert">{error}</p>}
+            <button className="button button-primary" type="submit" disabled={busy}>
+              {busy ? (register ? 'Creating account?' : 'Signing in?') : (register ? 'Create account' : 'Sign in to workspace')}
+            </button>
+          </form>
+          <div className="auth-divider"><span>or continue with</span></div>
+          <div className="auth-alternatives">
+            <button type="button" className="button button-quiet auth-alternative"><Mail size={15} />Google</button>
+            <button type="button" className="button button-quiet auth-alternative"><ShieldCheck size={15} />SSO</button>
+          </div>
+          <p className="auth-switch">{register ? 'Already have an account?' : 'Need an account?'} <Link to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Create one'}</Link></p>
+        </section>
+      </main>
+    </div>
+  )
+}
 export function LoginPage() { return <AuthPage /> }
 export function RegisterPage() { return <AuthPage register /> }
 
@@ -78,9 +223,24 @@ export function HistoryPage() {
 }
 
 export function ProfilePage() {
+  const { user } = useAuth()
   const [saved, setSaved] = useState(false)
-  function submit(event) { event.preventDefault(); setSaved(true) }
-  return <><PageIntro eyebrow="WORKSPACE / PROFILE" title="Profile settings" description="Manage the details shown in your local demo workspace." /><div className="profile-layout"><section className="report-panel profile-panel"><div className="profile-person"><span className="profile-avatar">JD</span><div><h2>Jordan Davis</h2><p>Workspace member · Demo profile</p></div></div><form onSubmit={submit} className="profile-form"><div className="profile-form-grid"><label className="field-label">Full name<span className="profile-input"><input defaultValue="Jordan Davis" name="full-name" /></span></label><label className="field-label">Email address<span className="profile-input"><input defaultValue="jordan@example.com" name="email" type="email" /></span></label><label className="field-label">Workspace<span className="profile-input"><input defaultValue="Personal workspace" name="workspace" /></span></label><label className="field-label">Time zone<span className="profile-input"><select defaultValue="Pacific Time"><option>Pacific Time</option><option>Mountain Time</option><option>Central Time</option><option>Eastern Time</option><option>UTC</option></select></span></label></div><div className="profile-form-bottom"><p><LockKeyhole size={14} />Changes stay in this browser demo and are not saved to an account.</p><button className="button button-primary button-small" type="submit">{saved ? <><Check size={15} />Saved locally</> : <>Save changes <ArrowRight size={15} /></>}</button></div></form></section><aside className="profile-side"><div className="profile-plan"><p className="eyebrow">CURRENT PLAN</p><div><Sparkles size={17} /><strong>Free demo</strong></div><p>Sample workspace with local interface data. Account features are not connected.</p><span><i className="signal-dot" />ACTIVE DEMO</span></div><div className="profile-security"><ShieldCheck size={18} /><p><strong>Privacy by default</strong><span>No credentials or profile changes leave this frontend demo.</span></p></div></aside></div></>
+
+  function submit(event) {
+    event.preventDefault()
+    setSaved(true)
+  }
+
+  const initials = user?.username
+    ? user.username
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('') || 'U'
+    : 'U'
+
+  return <><PageIntro eyebrow="WORKSPACE / PROFILE" title="Profile settings" description="Manage the details shown in your current secure workspace." /><div className="profile-layout"><section className="report-panel profile-panel"><div className="profile-person"><span className="profile-avatar">{initials}</span><div><h2>{user?.username ?? 'Secure user'}</h2><p>{user ? 'Authenticated workspace member' : 'Not signed in'}</p></div></div><form onSubmit={submit} className="profile-form"><div className="profile-form-grid"><label className="field-label">Username<span className="profile-input"><input defaultValue={user?.username ?? ''} name="username" /></span></label><label className="field-label">Email address<span className="profile-input"><input defaultValue={user?.email ?? ''} name="email" type="email" /></span></label><label className="field-label">Workspace<span className="profile-input"><input defaultValue="Personal workspace" name="workspace" /></span></label><label className="field-label">Time zone<span className="profile-input"><select defaultValue="UTC"><option>Pacific Time</option><option>Mountain Time</option><option>Central Time</option><option>Eastern Time</option><option>UTC</option></select></span></label></div><div className="profile-form-bottom"><p><LockKeyhole size={14} />Your profile is currently tied to your authenticated session.</p><button className="button button-primary button-small" type="submit">{saved ? <><Check size={15} />Saved</> : <>Save changes <ArrowRight size={15} /></>}</button></div></form></section><aside className="profile-side"><div className="profile-plan"><p className="eyebrow">CURRENT PLAN</p><div><Sparkles size={17} /><strong>Protected workspace</strong></div><p>Account details update from your secure backend session.</p><span><i className="signal-dot" />ACTIVE SESSION</span></div><div className="profile-security"><ShieldCheck size={18} /><p><strong>Privacy by default</strong><span>Your JWT is kept in local storage and sent only to the API on authenticated requests.</span></p></div></aside></div></>
 }
 
 export function AboutPage() {

@@ -2,7 +2,8 @@ import {
   Activity, ArrowRight, ArrowUpRight, CircleHelp, Clock3, History, Info,
   LayoutDashboard, LockKeyhole, ScanLine, ShieldCheck, UserRound,
 } from 'lucide-react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from './context/AuthContext.jsx'
 
 const appLinks = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -27,16 +28,33 @@ function AppNavLink({ item }) {
 
 export function AppShell({ children }) {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
   const currentLink = appLinks.find((item) => item.to === location.pathname)
+
+  const initials = user?.username
+    ? user.username
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('') || 'U'
+    : 'U'
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <div className="app-frame">
       <aside className="app-sidebar">
         <div className="sidebar-brand"><Brand /></div><p className="eyebrow sidebar-label">WORKSPACE</p>
         <nav className="sidebar-nav" aria-label="Workspace navigation">{appLinks.map((item) => <AppNavLink item={item} key={item.to} />)}</nav>
-        <div className="sidebar-bottom"><div className="sidebar-note"><span className="signal-dot" /><span><strong>Local demo</strong><small>No API connection</small></span></div><div className="sidebar-user"><span className="avatar">JD</span><span><strong>Jordan Davis</strong><small>Free workspace</small></span><Link to="/profile" className="icon-link" aria-label="Open profile"><UserRound size={16} /></Link></div></div>
+        <div className="sidebar-bottom"><div className="sidebar-note"><span className="signal-dot" /><span><strong>Authenticated</strong><small>{user?.email ?? 'Secure session'}</small></span></div><div className="sidebar-user"><span className="avatar">{initials}</span><span><strong>{user?.username ?? 'User'}</strong><small>{user ? 'Secure workspace' : 'Guest'}</small></span><Link to="/profile" className="icon-link" aria-label="Open profile"><UserRound size={16} /></Link></div></div>
       </aside>
       <div className="app-main">
-        <header className="app-topbar"><div className="page-width topbar-inner"><div className="topbar-title"><span className="mobile-brand"><Brand compact /></span><span className="topbar-context"><i className="signal-dot" />{currentLink?.label ?? 'Workspace'}</span></div><div className="topbar-actions"><span className="local-chip"><LockKeyhole size={12} /> DEMO MODE</span><Link to="/profile" className="topbar-avatar" aria-label="Profile">JD</Link></div></div></header>
+        <header className="app-topbar"><div className="page-width topbar-inner"><div className="topbar-title"><span className="mobile-brand"><Brand compact /></span><span className="topbar-context"><i className="signal-dot" />{currentLink?.label ?? 'Workspace'}</span></div><div className="topbar-actions"><button type="button" className="button button-quiet button-small" onClick={handleLogout}>Logout</button><Link to="/profile" className="topbar-avatar" aria-label="Profile">{initials}</Link></div></div></header>
         <nav className="mobile-app-nav" aria-label="Workspace navigation">{appLinks.slice(0, 4).map((item) => <AppNavLink item={item} key={item.to} />)}</nav>
         <main className="page-width app-content">{children}</main>
         <footer className="page-width app-footer"><span>QR GUARD <i>/</i> SCAN SMART. STAY SAFE.</span><Link to="/about">About this demo <CircleHelp size={13} /></Link></footer>

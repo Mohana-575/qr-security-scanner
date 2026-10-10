@@ -1,7 +1,10 @@
 fastapi
 uvicorn[standard]
+python-multipart>=0.0.9,<1
+opencv-python-headless>=4.10,<5
 sqlalchemy>=2,<3
 pydantic>=2,<3
 pydantic-settings>=2,<3
+email-validator>=2,<3
 PyJWT[crypto]
 pwdlib[argon2]

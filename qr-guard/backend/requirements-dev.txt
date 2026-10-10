@@ -1,3 +1,4 @@
 -r requirements.txt
 httpx2
 pytest
+qrcode[pil]>=7.4,<9

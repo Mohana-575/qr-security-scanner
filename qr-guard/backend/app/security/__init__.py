@@ -1,1 +1,1 @@
-"""Security utilities package; authentication is not configured yet."""
+"""Password hashing, JWT, and authentication dependency utilities."""

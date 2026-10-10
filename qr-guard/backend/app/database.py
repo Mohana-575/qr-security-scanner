@@ -22,3 +22,9 @@ def get_db() -> Generator[Session, None, None]:
         yield database_session
     finally:
         database_session.close()
+
+
+def create_db_and_tables() -> None:
+    from app.models import Scan, User
+
+    Base.metadata.create_all(bind=engine)
